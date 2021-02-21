@@ -151,14 +151,14 @@ void AP_AHRS_NavEKF::update_DCM(bool skip_ins_update)
 
     AP_AHRS_DCM::update(skip_ins_update);
 
-    // keep DCM attitude available for get_secondary_attitude()
+    // keep DCM attitude available for get_secondary_attitude(), 保持DCM姿态对get_secondary_attitude()可用
     _dcm_attitude(roll, pitch, yaw);
 }
 
 void AP_AHRS_NavEKF::update_EKF2(void)
 {
     if (!_ekf2_started) {
-        // wait 1 second for DCM to output a valid tilt error estimate
+        // wait 1 second for DCM to output a valid tilt error estimate, 等待1秒用于DCM输出有效的倾斜误差估计
         if (start_time_ms == 0) {
             start_time_ms = AP_HAL::millis();
         }
