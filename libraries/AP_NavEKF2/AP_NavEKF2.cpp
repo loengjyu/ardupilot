@@ -631,7 +631,7 @@ bool NavEKF2::InitialiseFilter(void)
     // remember expected frame time
     _frameTimeUsec = 1e6 / ins.get_sample_rate();
 
-    // expected number of IMU frames per prediction
+    // 计算有多少个预测方程，因为这里有几组IMU -- expected number of IMU frames per prediction
     _framesPerPrediction = uint8_t((EKF_TARGET_DT / (_frameTimeUsec * 1.0e-6) + 0.5));
 
     // see if we will be doing logging
@@ -708,6 +708,7 @@ bool NavEKF2::InitialiseFilter(void)
     return ret;
 }
 
+// 更新过滤器状态 -- 这应该在新的IMU数据可用时被调用
 // Update Filter States - this should be called whenever new IMU data is available
 void NavEKF2::UpdateFilter(void)
 {

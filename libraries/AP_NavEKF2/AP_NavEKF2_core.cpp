@@ -550,13 +550,13 @@ void NavEKF2_core::UpdateFilter(bool predict)
 
     // TODO - in-flight restart method
 
-    //get starting time for update step
+    // 记录当前时间 -- get starting time for update step
     imuSampleTime_ms = frontend->imuSampleTime_us / 1000;
 
     // Check arm status and perform required checks and mode changes
     controlFilterModes();
 
-    // read IMU data as delta angles and velocities
+    // 读取IMU数据为角度和速度 -- read IMU data as delta angles and velocities
     readIMUData();
 
     // Run the EKF equations to estimate at the fusion time horizon if new IMU data is available in the buffer
@@ -658,6 +658,7 @@ void NavEKF2_core::UpdateStrapdownEquationsNED()
     // apply correction for earth's rotation rate
     // % * - and + operators have been overloaded
     // 通过欧拉角得到旋转四元数，从之前的姿态旋转来更新四元数状态，并将其归一化
+    // 纠正后的欧拉角变化量 - 上移时刻的旋转矩阵 * 地球的自旋产生的角度变化
     stateStruct.quat.rotate(delAngCorrected - prevTnb * earthRateNED*imuDataDelayed.delAngDT);
     stateStruct.quat.normalize();
 
@@ -678,13 +679,12 @@ void NavEKF2_core::UpdateStrapdownEquationsNED()
     // 计算速度变化率(用于发射检测等功能)
     velDotNED = delVelNav / imuDataDelayed.delVelDT;
 
-    // apply a first order lowpass filter
-    // 应用一阶低通滤波器
+    // 应用一阶低通滤波器 -- apply a first order lowpass filter
     velDotNEDfilt = velDotNED * 0.05f + velDotNEDfilt * 0.95f;
 
     // calculate a magnitude of the filtered nav acceleration (required for GPS
     // variance estimation)
-    // 计算滤波后的导航加速度(GPS方差估计所需)的幅度
+    // 计算滤波后的导航加速度(GPS方差估计所需)的幅值
     accNavMag = velDotNEDfilt.length();
     accNavMagHoriz = norm(velDotNEDfilt.x , velDotNEDfilt.y);
 
@@ -943,7 +943,7 @@ void NavEKF2_core::CovariancePrediction()
     float dax_s;        // X axis delta angle measurement scale factor
     float day_s;        // Y axis delta angle measurement scale factor
     float daz_s;        // Z axis delta angle measurement scale factor
-    float dvz_b;        // Z axis delta velocity measurement bias (rad)
+    float dvz_b;        // Z axis delta velocity measurement bias
     Vector25 SF;
     Vector5 SG;
     Vector8 SQ;
@@ -1593,6 +1593,7 @@ void NavEKF2_core::ConstrainStates()
     for (uint8_t i=19; i<=21; i++) statesArray[i] = constrain_float(statesArray[i],-0.5f,0.5f);
     // wind velocity limit 100 m/s (could be based on some multiple of max airspeed * EAS2TAS) - TODO apply circular limit
     for (uint8_t i=22; i<=23; i++) statesArray[i] = constrain_float(statesArray[i],-100.0f,100.0f);
+    // 除非我们使用地形作为高度基准，否则将地形状态约束为低于车辆高度
     // constrain the terrain state to be below the vehicle height unless we are using terrain as the height datum
     if (!inhibitGndState) {
         terrainState = MAX(terrainState, stateStruct.position.z + rngOnGnd);

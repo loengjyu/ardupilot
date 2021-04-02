@@ -155,6 +155,7 @@ void AP_AHRS_NavEKF::update_DCM(bool skip_ins_update)
     _dcm_attitude(roll, pitch, yaw);
 }
 
+// **************************************** 更新EKF2 ****************************************//
 void AP_AHRS_NavEKF::update_EKF2(void)
 {
     if (!_ekf2_started) {
@@ -180,13 +181,15 @@ void AP_AHRS_NavEKF::update_EKF2(void)
             yaw   = eulers.z;
 
             update_cd_values();
-            update_trig();
+            update_trig(); // 更新欧拉角的正余弦值
 
             // Use the primary EKF to select the primary gyro
             const int8_t primary_imu = EKF2.getPrimaryCoreIMUIndex();
 
             const AP_InertialSensor &_ins = AP::ins();
 
+            // 得到主EKF的陀螺偏置，改变符号给出陀螺漂移
+            // EKF使用的符号约定是bias = measurement - truth
             // get gyro bias for primary EKF and change sign to give gyro drift
             // Note sign convention used by EKF is bias = measurement - truth
             _gyro_drift.zero();

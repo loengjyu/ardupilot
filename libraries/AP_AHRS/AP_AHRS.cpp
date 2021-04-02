@@ -359,7 +359,7 @@ void AP_AHRS::calc_trig(const Matrix3f &rot,
 }
 
 // update_trig - recalculates _cos_roll, _cos_pitch, etc based on latest attitude
-//      should be called after _dcm_matrix is updated
+// should be called after _dcm_matrix is updated
 void AP_AHRS::update_trig(void)
 {
     if (_last_trim != _trim.get()) {
