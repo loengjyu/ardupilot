@@ -159,6 +159,7 @@ void AP_AHRS_NavEKF::update_EKF2(void)
 {
     if (!_ekf2_started) {
         // wait 1 second for DCM to output a valid tilt error estimate
+        // 等待1秒，让DCM输出有效的倾斜误差估计值
         if (start_time_ms == 0) {
             start_time_ms = AP_HAL::millis();
         }

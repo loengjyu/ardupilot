@@ -304,6 +304,7 @@ void NavEKF2_core::readIMUData()
     dtIMUavg = ins.get_loop_delta_t();
 
     // the imu sample time is used as a common time reference throughout the filter
+    // imu采样时间被用作整个滤波器的公共时间参考
     imuSampleTime_ms = AP_HAL::millis();
 
     // use the nominated imu or primary if not available
