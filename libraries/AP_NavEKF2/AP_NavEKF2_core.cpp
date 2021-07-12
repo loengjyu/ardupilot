@@ -528,6 +528,7 @@ void NavEKF2_core::CovarianceInit()
 *                 UPDATE FUNCTIONS                      *
 ********************************************************/
 // Update Filter States - this should be called whenever new IMU data is available
+// 更新过滤器状态——每当有新的IMU数据可用时都应该调用这个函数
 void NavEKF2_core::UpdateFilter(bool predict)
 {
     // Set the flag to indicate to the filter that the front-end has given permission for a new state prediction cycle to be started

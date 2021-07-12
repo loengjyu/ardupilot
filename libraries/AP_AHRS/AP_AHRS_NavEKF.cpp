@@ -164,7 +164,7 @@ void AP_AHRS_NavEKF::update_EKF2(void)
             start_time_ms = AP_HAL::millis();
         }
         if (AP_HAL::millis() - start_time_ms > startup_delay_ms || _force_ekf) {
-            _ekf2_started = EKF2.InitialiseFilter();
+            _ekf2_started = EKF2.InitialiseFilter(); // ³õÊ¼»¯ÂË²¨Æ÷
             if (_force_ekf) {
                 return;
             }
@@ -208,7 +208,7 @@ void AP_AHRS_NavEKF::update_EKF2(void)
             float abias = 0;
             EKF2.getAccelZBias(-1,abias);
 
-            // This EKF is currently using primary_imu, and abias applies to only that IMU
+            // This EKF is currently using primary_imu, and a bias applies to only that IMU
             for (uint8_t i=0; i<_ins.get_accel_count(); i++) {
                 Vector3f accel = _ins.get_accel(i);
                 if (i == primary_imu) {

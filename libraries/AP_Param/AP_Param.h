@@ -811,7 +811,7 @@ public:
 
     /// Value getter
     ///
-    const T &get(void) const {
+    const T &xx(void) const {
         return _value;
     }
 

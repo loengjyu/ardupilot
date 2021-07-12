@@ -369,8 +369,8 @@ void NavEKF2_core::readIMUData()
 
     // Rotate quaternon atitude from previous to new and normalise.
     // Accumulation using quaternions prevents introduction of coning errors due to downsampling
-    imuQuatDownSampleNew.rotate(imuDataNew.delAng);
-    imuQuatDownSampleNew.normalize();
+    imuQuatDownSampleNew.rotate(imuDataNew.delAng); // 用陀螺仪数据表示方向余弦矩阵
+    imuQuatDownSampleNew.normalize(); // 方向余弦矩阵转换成四元数
 
     // Rotate the latest delta velocity into body frame at the start of accumulation
     Matrix3f deltaRotMat;

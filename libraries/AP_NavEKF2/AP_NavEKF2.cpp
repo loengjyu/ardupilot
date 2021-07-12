@@ -709,6 +709,7 @@ bool NavEKF2::InitialiseFilter(void)
 }
 
 // Update Filter States - this should be called whenever new IMU data is available
+// 更新过滤器状态 - 每当有新的IMU数据可用时都应该调用这个函数
 void NavEKF2::UpdateFilter(void)
 {
     if (!core) {
@@ -731,7 +732,7 @@ void NavEKF2::UpdateFilter(void)
         } else {
             statePredictEnabled[i] = true;
         }
-        core[i].UpdateFilter(statePredictEnabled[i]);
+        core[i].UpdateFilter(statePredictEnabled[i]); // 滤波器更新
     }
 
     // If the current core selected has a bad error score or is unhealthy, switch to a healthy core with the lowest fault score
