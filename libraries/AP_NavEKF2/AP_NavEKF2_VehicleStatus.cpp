@@ -59,17 +59,19 @@ void NavEKF2_core::calcGpsGoodToAlign(void)
 
     // Check for significant change in GPS position if disarmed which indicates bad GPS
     // This check can only be used when the vehicle is stationary
+    //如果解锁，如果GPS位置的显著变化，表明GPS不好
+    //此检查只能在载具静止时使用
     const struct Location &gpsloc = gps.location(); // Current location
-    const float posFiltTimeConst = 10.0f; // time constant used to decay position drift
-    // calculate time lapsed since last update and limit to prevent numerical errors
+    const float posFiltTimeConst = 10.0f; // time constant used to decay position drift, 时间常数用于衰减位置漂移
+    // calculate time lapsed since last update and limit to prevent numerical errors, 计算自上次更新以来的时间和限制，以防止数值错误
     float deltaTime = constrain_float(float(imuDataDelayed.time_ms - lastPreAlignGpsCheckTime_ms)*0.001f,0.01f,posFiltTimeConst);
     lastPreAlignGpsCheckTime_ms = imuDataDelayed.time_ms;
     // Sum distance moved
     gpsDriftNE += gpsloc_prev.get_distance(gpsloc);
     gpsloc_prev = gpsloc;
-    // Decay distance moved exponentially to zero
+    // Decay distance moved exponentially to zero, 衰变距离以指数方式接近于零
     gpsDriftNE *= (1.0f - deltaTime/posFiltTimeConst);
-    // Clamp the filter state to prevent excessive persistence of large transients
+    // Clamp the filter state to prevent excessive persistence of large transients, 箝位滤波状态，以防止大瞬态的过度持续性
     gpsDriftNE = MIN(gpsDriftNE,10.0f);
     // Fail if more than 3 metres drift after filtering whilst on-ground
     // This corresponds to a maximum acceptable average drift rate of 0.3 m/s or single glitch event of 3m

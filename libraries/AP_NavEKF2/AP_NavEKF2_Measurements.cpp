@@ -304,7 +304,7 @@ void NavEKF2_core::readIMUData()
     dtIMUavg = ins.get_loop_delta_t();
 
     // the imu sample time is used as a common time reference throughout the filter
-    // imu����ʱ�䱻���������˲����Ĺ���ʱ��ο�
+    // imu����ʱ�䱻���������˲����Ĺ���ʱ��ο�
     imuSampleTime_ms = AP_HAL::millis();
 
     // use the nominated imu or primary if not available
@@ -369,8 +369,8 @@ void NavEKF2_core::readIMUData()
 
     // Rotate quaternon atitude from previous to new and normalise.
     // Accumulation using quaternions prevents introduction of coning errors due to downsampling
-    imuQuatDownSampleNew.rotate(imuDataNew.delAng); // �����������ݱ�ʾ�������Ҿ���
-    imuQuatDownSampleNew.normalize(); // �������Ҿ���ת������Ԫ��
+    imuQuatDownSampleNew.rotate(imuDataNew.delAng); // �����������ݱ�ʾ�������Ҿ���
+    imuQuatDownSampleNew.normalize(); // �������Ҿ���ת������Ԫ��
 
     // Rotate the latest delta velocity into body frame at the start of accumulation
     Matrix3f deltaRotMat;
@@ -486,24 +486,32 @@ void NavEKF2_core::readGpsData()
 
             // estimate when the GPS fix was valid, allowing for GPS processing and other delays
             // ideally we should be using a timing signal from the GPS receiver to set this time
+            // 估计何时GPS定位是有效的，允许GPS处理和其他延迟
+            // 理想情况下，我们应该使用来自GPS接收器的定时信号来设置这个时间
             float gps_delay = 0.0;
             gps.get_lag(gps_delay); // ignore the return value
             gpsDataNew.time_ms = lastTimeGpsReceived_ms - (uint32_t)(1e3f * gps_delay);
 
             // Correct for the average intersampling delay due to the filter updaterate
+            // 由于滤波器更新导致的平均采样间隔延迟
             gpsDataNew.time_ms -= localFilterTimeStep_ms/2;
 
             // Prevent time delay exceeding age of oldest IMU data in the buffer
+            // 防止时间延迟超过缓冲区中最旧的IMU数据的年龄
             gpsDataNew.time_ms = MAX(gpsDataNew.time_ms,imuDataDelayed.time_ms);
 
             // Get which GPS we are using for position information
+            // 获取我们正在使用的GPS位置信息
             gpsDataNew.sensor_idx = gps.primary_sensor();
 
             // read the NED velocity from the GPS
+            // 从GPS读取NED速度
             gpsDataNew.vel = gps.velocity();
 
             // Use the speed and position accuracy from the GPS if available, otherwise set it to zero.
             // Apply a decaying envelope filter with a 5 second time constant to the raw accuracy data
+            // 如果可用，使用GPS的速度和位置精度，否则设置为0。
+            // 对原始精度数据应用一个时间常数为5秒的衰减包络滤波器
             float alpha = constrain_float(0.0002f * (lastTimeGpsReceived_ms - secondLastGpsTime_ms),0.0f,1.0f);
             gpsSpdAccuracy *= (1.0f - alpha);
             float gpsSpdAccRaw;
@@ -551,9 +559,12 @@ void NavEKF2_core::readGpsData()
 
             // Monitor quality of the GPS velocity data both before and after alignment. This updates
             // GpsGoodToAlign class variable
+            // 监测校准前和校准后GPS速度数据的质量。这个更新
+            // GpsGoodToAlign类中的变量
             calcGpsGoodToAlign();
 
             // Post-alignment checks
+            // Post-alignment检查
             calcGpsGoodForFlight();
 
             // see if we can get origin from frontend
@@ -564,7 +575,7 @@ void NavEKF2_core::readGpsData()
             // Read the GPS location in WGS-84 lat,long,height coordinates
             const struct Location &gpsloc = gps.location();
 
-            // Set the EKF origin and magnetic field declination if not previously set  and GPS checks have passed
+            // Set the EKF origin and magnetic field declination if not previously set and GPS checks have passed
             if (gpsGoodToAlign && !validOrigin) {
                 setOrigin(gpsloc);
 

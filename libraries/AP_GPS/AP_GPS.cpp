@@ -374,8 +374,8 @@ uint8_t AP_GPS::num_sensors(void) const
     }
 }
 
-bool AP_GPS::speed_accuracy(uint8_t instance, float &sacc) const
 {
+bool AP_GPS::speed_accuracy(uint8_t instance, float &sacc) const
     if (state[instance].have_speed_accuracy) {
         sacc = state[instance].speed_accuracy;
         return true;
