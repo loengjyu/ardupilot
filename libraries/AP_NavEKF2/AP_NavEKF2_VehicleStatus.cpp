@@ -59,7 +59,7 @@ void NavEKF2_core::calcGpsGoodToAlign(void)
 
     // Check for significant change in GPS position if disarmed which indicates bad GPS
     // This check can only be used when the vehicle is stationary
-    //如果解锁，如果GPS位置的显著变化，表明GPS不好
+    //如果未解锁，如果GPS位置的显著变化，表明GPS不好
     //此检查只能在载具静止时使用
     const struct Location &gpsloc = gps.location(); // Current location
     const float posFiltTimeConst = 10.0f; // time constant used to decay position drift, 时间常数用于衰减位置漂移

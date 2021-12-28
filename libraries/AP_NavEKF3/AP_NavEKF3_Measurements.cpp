@@ -342,14 +342,25 @@ void NavEKF3_core::readMagData()
  *  Downsampling is done using a method that does not introduce coning or sculling
  *  errors.
  */
+
+/*
+ * 读取IMU delta角度和delta速度测量值，下采样至100Hz
+ * 用于存储在EKF使用的数据缓冲区中。如果IMU数据到达
+ * 速率低于100Hz，则不进行下采样或上采样。
+ * 下采样是使用一种方法，不引入锥进或划桨
+ * 错误。
+ */
+
 void NavEKF3_core::readIMUData()
 {
     const AP_InertialSensor &ins = AP::ins();
 
     // calculate an averaged IMU update rate using a spike and lowpass filter combination
+    // 使用脉冲和低通滤波器组合计算平均IMU更新速率
     dtIMUavg = 0.02f * constrain_float(ins.get_loop_delta_t(),0.5f * dtIMUavg, 2.0f * dtIMUavg) + 0.98f * dtIMUavg;
 
     // the imu sample time is used as a common time reference throughout the filter
+    // imu采样时间在整个过滤器中被用作公共时间引用
     imuSampleTime_ms = frontend->imuSampleTime_us / 1000;
 
     uint8_t accel_active, gyro_active;
@@ -382,43 +393,54 @@ void NavEKF3_core::readIMUData()
     }
 
     // update the inactive bias states
+    // 更新不活跃的imu的bias
     learnInactiveBiases();
 
+    // 读取速度增量
     readDeltaVelocity(accel_index_active, imuDataNew.delVel, imuDataNew.delVelDT);
     accelPosOffset = ins.get_imu_pos_offset(accel_index_active);
     imuDataNew.accel_index = accel_index_active;
     
     // Get delta angle data from primary gyro or primary if not available
+    // 读取角度增量
     readDeltaAngle(gyro_index_active, imuDataNew.delAng);
     imuDataNew.delAngDT = MAX(ins.get_delta_angle_dt(gyro_index_active),1.0e-4f);
     imuDataNew.gyro_index = gyro_index_active;
 
     // Get current time stamp
+    // 获取当前时间戳
     imuDataNew.time_ms = imuSampleTime_ms;
 
     // Accumulate the measurement time interval for the delta velocity and angle data
+    // 累加时间
     imuDataDownSampledNew.delAngDT += imuDataNew.delAngDT;
     imuDataDownSampledNew.delVelDT += imuDataNew.delVelDT;
 
     // use the most recent IMU index for the downsampled IMU
     // data. This isn't strictly correct if we switch IMUs between
     // samples
+    // 为下采样的IMU使用最近的IMU索引数据。如果我们在imu之间切换，这并不是严格正确的样本
     imuDataDownSampledNew.gyro_index = imuDataNew.gyro_index;
     imuDataDownSampledNew.accel_index = imuDataNew.accel_index;
 
     // Rotate quaternon atitude from previous to new and normalise.
     // Accumulation using quaternions prevents introduction of coning errors due to downsampling
+    // 将四元数从先前旋转到新的并归一化。角度增量转化为四元数
+    // 使用四元数积累可以防止由于采样下降而引入锥进误差
     imuQuatDownSampleNew.rotate(imuDataNew.delAng);
     imuQuatDownSampleNew.normalize();
 
     // Rotate the latest delta velocity into body frame at the start of accumulation
+    // 在开始累积时，将最新的delta速度旋转到body框架中
     Matrix3f deltaRotMat;
     imuQuatDownSampleNew.rotation_matrix(deltaRotMat);
 
     // Apply the delta velocity to the delta velocity accumulator
+    // 把速度增量应用到速度累加器上
     imuDataDownSampledNew.delVel += deltaRotMat*imuDataNew.delVel;
 
     // Keep track of the number of IMU frames since the last state prediction
+    // 记录自上次状态预测以来IMU帧数
     framesSincePredict++;
 
     /*
@@ -426,24 +448,31 @@ void NavEKF3_core::readIMUData()
      * then store the accumulated IMU data to be used by the state prediction, ignoring the frontend permission if more
      * than twice the target time has lapsed. Adjust the target EKF step time threshold to allow for timing jitter in the
      * IMU data.
+     * 如果目标EKF时间步长已累积，且前端已允许开始一个新的预测周期，然后使用存储累积的IMU数据用于状态预测，如果更多则忽略前端权限
+     * 超过两倍的目标时间已经过去。调整目标EKF步长时间阈值，允许定时抖动IMU数据。
      */
     if ((imuDataDownSampledNew.delAngDT >= (EKF_TARGET_DT-(dtIMUavg*0.5f)) && startPredictEnabled) ||
         (imuDataDownSampledNew.delAngDT >= 2.0f*EKF_TARGET_DT)) {
 
         // convert the accumulated quaternion to an equivalent delta angle
+        // 将累积的四元数转换为等效的角度增量
         imuQuatDownSampleNew.to_axis_angle(imuDataDownSampledNew.delAng);
 
         // Time stamp the data
+        // imu数据时间戳
         imuDataDownSampledNew.time_ms = imuSampleTime_ms;
 
         // Write data to the FIFO IMU buffer
+        // 向FIFO IMU缓冲区写入数据
         storedIMU.push_youngest_element(imuDataDownSampledNew);
 
         // calculate the achieved average time step rate for the EKF using a combination spike and LPF
+        // 使用组合脉冲和LPF计算EKF实现的平均时间步长率
         float dtNow = constrain_float(0.5f*(imuDataDownSampledNew.delAngDT+imuDataDownSampledNew.delVelDT),0.5f * dtEkfAvg, 2.0f * dtEkfAvg);
         dtEkfAvg = 0.98f * dtEkfAvg + 0.02f * dtNow;
 
         // zero the accumulated IMU data and quaternion
+        // 将累积的IMU数据和四元数归零
         imuDataDownSampledNew.delAng.zero();
         imuDataDownSampledNew.delVel.zero();
         imuDataDownSampledNew.delAngDT = 0.0f;
@@ -452,22 +481,28 @@ void NavEKF3_core::readIMUData()
         imuQuatDownSampleNew[3] = imuQuatDownSampleNew[2] = imuQuatDownSampleNew[1] = 0.0f;
 
         // reset the counter used to let the frontend know how many frames have elapsed since we started a new update cycle
+        // 重置用于让前端知道从我们开始一个新的更新周期已经经过了多少帧的计数器
         framesSincePredict = 0;
 
         // set the flag to let the filter know it has new IMU data and needs to run
+        // 设置标志让过滤器知道它有新的IMU数据，需要运行
         runUpdates = true;
 
         // extract the oldest available data from the FIFO buffer
+        // 从FIFO缓冲区中提取最老的可用数据
         imuDataDelayed = storedIMU.pop_oldest_element();
 
         // protect against delta time going to zero
+        // 防止时间增量变为零
         float minDT = 0.1f * dtEkfAvg;
         imuDataDelayed.delAngDT = MAX(imuDataDelayed.delAngDT,minDT);
         imuDataDelayed.delVelDT = MAX(imuDataDelayed.delVelDT,minDT);
 
+        // 统计相关时间
         updateTimingStatistics();
         
         // correct the extracted IMU data for sensor errors
+        // 纠正提取的IMU数据的传感器错误
         delAngCorrected = imuDataDelayed.delAng;
         delVelCorrected = imuDataDelayed.delVel;
         correctDeltaAngle(delAngCorrected, imuDataDelayed.delAngDT, imuDataDelayed.gyro_index);
@@ -475,6 +510,7 @@ void NavEKF3_core::readIMUData()
 
     } else {
         // we don't have new IMU data in the buffer so don't run filter updates on this time step
+        // 我们没有新的IMU数据在缓冲区，所以不要在这个时间步骤上运行过滤器更新
         runUpdates = false;
     }
 }
@@ -958,32 +994,43 @@ void NavEKF3_core::getTimingStatistics(struct ekf_timing &_timing)
 }
 
 /*
-  update estimates of inactive bias states. This keeps inactive IMUs
-  as hot-spares so we can switch to them without causing a jump in the
-  error
+ * update estimates of inactive bias states. This keeps inactive IMUs
+ * as hot-spares so we can switch to them without causing a jump in the
+ * error
+ * 更新不活跃的传感器的bias状态估计。这使imu保持不活跃
+ * 作为热备，这样我们就可以切换到它们而不会引起跳跃
+ * 错误
  */
+
 void NavEKF3_core::learnInactiveBiases(void)
 {
     const AP_InertialSensor &ins = AP::ins();
 
     // learn gyro biases
+    // 学习陀螺仪的bias
     for (uint8_t i=0; i<INS_MAX_INSTANCES; i++) {
         if (!ins.use_gyro(i)) {
             // can't use this gyro
+            // 该陀螺仪不健康，不使用它
             continue;
         }
         if (gyro_index_active == i) {
             // use current estimates from main filter of gyro bias
+            // 从当前EKF滤波器中获取当前的IMU偏置
             inactiveBias[i].gyro_bias = stateStruct.gyro_bias;
         } else {
             // get filtered gyro and use the difference between the
             // corrected gyro on the active IMU and the inactive IMU
             // to move the inactive bias towards the right value
+            // 得到过滤陀螺仪和使用的差异
+            // 主IMU和非主IMU上的校正陀螺
+            // 将不活跃的偏向移动到正确的值
             Vector3f filtered_gyro_active = ins.get_gyro(gyro_index_active) - (stateStruct.gyro_bias/dtEkfAvg);
             Vector3f filtered_gyro_inactive = ins.get_gyro(i) - (inactiveBias[i].gyro_bias/dtEkfAvg);
             Vector3f error = filtered_gyro_active - filtered_gyro_inactive;
 
             // prevent a single large error from contaminating bias estimate
+            // 防止一个较大的误差污染偏差估计
             const float bias_limit = radians(5);
             error.x = constrain_float(error.x, -bias_limit, bias_limit);
             error.y = constrain_float(error.y, -bias_limit, bias_limit);
@@ -991,6 +1038,8 @@ void NavEKF3_core::learnInactiveBiases(void)
 
             // slowly bring the inactive gyro in line with the active gyro. This corrects a 5 deg/sec
             // gyro bias error in around 1 minute
+            // 慢慢地使非活动陀螺与活动陀螺一致。这修正了5度/秒
+            // 陀螺偏压误差在1分钟左右
             inactiveBias[i].gyro_bias -= error * (1.0e-4f * dtEkfAvg);
         }
     }

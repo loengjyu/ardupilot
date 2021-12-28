@@ -34,7 +34,6 @@ void NavEKF3_core::controlFilterModes()
 
     // Set the type of inertial navigation aiding used
     setAidingMode();
-
 }
 
 /*

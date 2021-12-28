@@ -571,14 +571,17 @@ void NavEKF3_core::CovarianceInit()
 void NavEKF3_core::UpdateFilter(bool predict)
 {
     // Set the flag to indicate to the filter that the front-end has given permission for a new state prediction cycle to be started
+    // 设置该标志以指示过滤器前端已授予启动新状态预测周期的权限
     startPredictEnabled = predict;
 
     // don't run filter updates if states have not been initialised
+    // 如果状态尚未初始化，则不要运行EKF
     if (!statesInitialised) {
         return;
     }
 
     // start the timer used for load measurement
+    // 启动用于负载测量的定时器
 #if EK3_DISABLE_INTERRUPTS
     void *istate = hal.scheduler->disable_interrupts_save();
 #endif
@@ -587,14 +590,18 @@ void NavEKF3_core::UpdateFilter(bool predict)
     fill_scratch_variables();
 
     // TODO - in-flight restart method
+    // 飞行中重新启动方法
 
     // Check arm status and perform required checks and mode changes
+    // 检查解锁状态并进行必要的检查和模式改变
     controlFilterModes();
 
     // read IMU data as delta angles and velocities
+    // 读取IMU数据，角度增量和速度增量，runUpdates在该处决定设不设置为true
     readIMUData();
 
     // Run the EKF equations to estimate at the fusion time horizon if new IMU data is available in the buffer
+    // 如果缓冲区中有新的IMU数据，运行EKF方程来估计融合时间范围
     if (runUpdates) {
         // Predict states using IMU data from the delayed time horizon
         UpdateStrapdownEquationsNED();
@@ -868,7 +875,7 @@ void NavEKF3_core::calcOutputStates()
         for (unsigned index=0; index < imu_buffer_length; index++) {
             outputStates = storedOutput[index];
 
-            // a constant  velocity correction is applied
+            // a constant velocity correction is applied
             outputStates.velocity += velCorrection;
 
             // a constant position correction is applied
@@ -880,7 +887,6 @@ void NavEKF3_core::calcOutputStates()
 
         // update output state to corrected values
         outputDataNew = storedOutput[storedIMU.get_youngest_index()];
-
     }
 }
 
