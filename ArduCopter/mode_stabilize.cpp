@@ -9,13 +9,16 @@
 void ModeStabilize::run()
 {
     // apply simple mode transform to pilot inputs
+    // 更新遥控器控制机头飞行模式
     update_simple_mode();
 
     // convert pilot input to lean angles
+    // 将飞手输入转换为倾斜角度
     float target_roll, target_pitch;
     get_pilot_desired_lean_angles(target_roll, target_pitch, copter.aparm.angle_max, copter.aparm.angle_max);
 
     // get pilot's desired yaw rate
+    // 获取飞手期望的偏航角速度
     float target_yaw_rate = get_pilot_desired_yaw_rate(channel_yaw->get_control_in());
 
     if (!motors->armed()) {

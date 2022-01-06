@@ -397,6 +397,8 @@ void Mode::update_navigation()
 
 // get_pilot_desired_angle - transform pilot's roll or pitch input into a desired lean angle
 // returns desired angle in centi-degrees
+// get_pilot_desired_angle - 将飞行员的横摇或俯仰输入转换为所需的倾斜角度
+// 返回所需的角度(以centi-degrees为单位)
 void Mode::get_pilot_desired_lean_angles(float &roll_out, float &pitch_out, float angle_max, float angle_limit) const
 {
     // throttle failsafe check
@@ -406,18 +408,22 @@ void Mode::get_pilot_desired_lean_angles(float &roll_out, float &pitch_out, floa
         return;
     }
     // fetch roll and pitch inputs
+    // 获取roll和pitch的输入
     roll_out = channel_roll->get_control_in();
     pitch_out = channel_pitch->get_control_in();
 
 	// limit max lean angle
+    // 限制最大倾斜角度
     angle_limit = constrain_float(angle_limit, 1000.0f, angle_max);
 
     // scale roll and pitch inputs to ANGLE_MAX parameter range
+    // 缩放roll和pitch输入ANGLE_MAX参数范围
     float scaler = angle_max/(float)ROLL_PITCH_YAW_INPUT_MAX;
     roll_out *= scaler;
     pitch_out *= scaler;
 
     // do circular limit
+    // 循环限制
     float total_in = norm(pitch_out, roll_out);
     if (total_in > angle_limit) {
         float ratio = angle_limit / total_in;
@@ -426,6 +432,7 @@ void Mode::get_pilot_desired_lean_angles(float &roll_out, float &pitch_out, floa
     }
 
     // do lateral tilt to euler roll conversion
+    // 做横向倾斜到欧拉滚转换
     roll_out = (18000/M_PI) * atanf(cosf(pitch_out*(M_PI/18000))*tanf(roll_out*(M_PI/18000)));
 
     // roll_out and pitch_out are returned
