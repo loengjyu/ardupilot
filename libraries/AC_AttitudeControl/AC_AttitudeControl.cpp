@@ -245,7 +245,7 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw(float euler
     float euler_yaw_rate = radians(euler_yaw_rate_cds * 0.01f);
 
     // calculate the attitude target euler angles
-    // 计算目标欧拉角
+    // 计算目标欧拉角，从四元数计算期望欧拉角
     _attitude_target_quat.to_euler(_attitude_target_euler_angle.x, _attitude_target_euler_angle.y, _attitude_target_euler_angle.z);
 
     // Add roll trim to compensate tail rotor thrust in heli (will return zero on multirotors)
@@ -254,7 +254,7 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw(float euler
 
     if (_rate_bf_ff_enabled) {
         // translate the roll pitch and yaw acceleration limits to the euler axis
-        // 平移roll,pitch和yaw加速度限制到欧拉轴
+        // 平移roll,pitch和yaw加速度限制到欧拉轴（不理解为什么这样？）
         Vector3f euler_accel = euler_accel_limit(_attitude_target_euler_angle, Vector3f(get_accel_roll_max_radss(), get_accel_pitch_max_radss(), get_accel_yaw_max_radss()));
 
         // When acceleration limiting and feedforward are enabled, the sqrt controller is used to compute an euler
@@ -278,18 +278,23 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw(float euler
         ang_vel_to_euler_rate(_attitude_target_euler_angle, _attitude_target_ang_vel, _attitude_target_euler_rate);
     } else {
         // When feedforward is not enabled, the target euler angle is input into the target and the feedforward rate is zeroed.
+        // 如果没有开启前馈，期望欧拉角由遥控器给定
         _attitude_target_euler_angle.x = euler_roll_angle;
         _attitude_target_euler_angle.y = euler_pitch_angle;
         _attitude_target_euler_angle.z += euler_yaw_rate * _dt;
         // Compute quaternion target attitude
+        // 计算期望欧拉角的四元数
         _attitude_target_quat.from_euler(_attitude_target_euler_angle.x, _attitude_target_euler_angle.y, _attitude_target_euler_angle.z);
 
         // Set rate feedforward requests to zero
+        // 将速率前馈设置为零，即没有前馈量
         _attitude_target_euler_rate = Vector3f(0.0f, 0.0f, 0.0f);
         _attitude_target_ang_vel = Vector3f(0.0f, 0.0f, 0.0f);
     }
 
     // Call quaternion attitude controller
+    // 调用四元数姿态控制器（真正的P控制器在其中运行）
+	// 根据姿态角误差计算出期望角速率
     attitude_controller_run_quat();
 }
 
@@ -654,7 +659,7 @@ void AC_AttitudeControl::input_angle_step_bf_roll_pitch_yaw(float roll_angle_ste
 void AC_AttitudeControl::attitude_controller_run_quat()
 {
     // Retrieve quaternion vehicle attitude
-    // 检索四元数机体姿态
+    // 检索机体姿态，四元数
     Quaternion attitude_vehicle_quat;
     _ahrs.get_quat_body_to_ned(attitude_vehicle_quat);
 
@@ -711,6 +716,7 @@ void AC_AttitudeControl::attitude_controller_run_quat()
 
 // thrust_heading_rotation_angles - calculates two ordered rotations to move the att_from_quat quaternion to the att_to_quat quaternion.
 // The first rotation corrects the thrust vector and the second rotation corrects the heading vector.
+// 倾转分离
 void AC_AttitudeControl::thrust_heading_rotation_angles(Quaternion& att_to_quat, const Quaternion& att_from_quat, Vector3f& att_diff_angle, float& thrust_vec_dot)
 {
     Matrix3f att_to_rot_matrix; // rotation from the target body frame to the inertial frame.
@@ -771,12 +777,15 @@ void AC_AttitudeControl::thrust_heading_rotation_angles(Quaternion& att_to_quat,
 
 // calculates the velocity correction from an angle error. The angular velocity has acceleration and
 // deceleration limits including basic jerk limiting using _input_tc
+// 计算从角度误差的速度修正。角速度有加速度和减速限制，包括使用_input_tc的基本jerk限制，实际就是sqrt控制器
 float AC_AttitudeControl::input_shaping_angle(float error_angle, float input_tc, float accel_max, float target_ang_vel, float dt)
 {
     // Calculate the velocity as error approaches zero with acceleration limited by accel_max_radss
+    // 当加速度受accel_max_radss限制时，计算误差接近零的速度
     float desired_ang_vel = sqrt_controller(error_angle, 1.0f / MAX(input_tc, 0.01f), accel_max, dt);
 
     // Acceleration is limited directly to smooth the beginning of the curve.
+    // 加速度被直接限制，以平滑曲线的开始。
     return input_shaping_ang_vel(target_ang_vel, desired_ang_vel, accel_max, dt);
 }
 
@@ -784,6 +793,7 @@ float AC_AttitudeControl::input_shaping_angle(float error_angle, float input_tc,
 float AC_AttitudeControl::input_shaping_ang_vel(float target_ang_vel, float desired_ang_vel, float accel_max, float dt)
 {
     // Acceleration is limited directly to smooth the beginning of the curve.
+    // 平滑加速度曲线
     if (is_positive(accel_max)) {
         float delta_ang_vel = accel_max * dt;
         return constrain_float(desired_ang_vel, target_ang_vel - delta_ang_vel, target_ang_vel + delta_ang_vel);
