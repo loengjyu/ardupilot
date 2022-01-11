@@ -246,6 +246,10 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw(float euler
 
     // calculate the attitude target euler angles
     // 计算目标欧拉角，从四元数计算期望欧拉角
+    // _attitude_target_quat表示当前（未更新本次输入前）的期望姿态的四元数
+	// 可以理解为操作员通过遥控器摇杆输入的期望姿态是在实时变更的
+	// 这个总函数(input_euler_xxx)的输入是本次输入的期望，而_attitude_target_quat中保存的是还未收到本次输入进行更新前，当下的期望姿态
+	// 此处将其转换为欧拉角形式_attitude_target_euler_angle
     _attitude_target_quat.to_euler(_attitude_target_euler_angle.x, _attitude_target_euler_angle.y, _attitude_target_euler_angle.z);
 
     // Add roll trim to compensate tail rotor thrust in heli (will return zero on multirotors)
@@ -268,13 +272,18 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw(float euler
 
         // When yaw acceleration limiting is enabled, the yaw input shaper constrains angular acceleration about the yaw axis, slewing
         // the output rate towards the input rate.
+        // 将期望姿态的欧拉角速率_attitude_target_euler_rate转换为前馈的期望机体角速度矢量_attitude_target_ang_vel
+		// 姿态变化率（n系）转换为期望机体角速度（cb系）
         _attitude_target_euler_rate.z = input_shaping_ang_vel(_attitude_target_euler_rate.z, euler_yaw_rate, euler_accel.z, _dt);
 
         // Convert euler angle derivative of desired attitude into a body-frame angular velocity vector for feedforward
+        // 将期望姿态的欧拉角导数转换为前馈的车身框架角速度矢量
         euler_rate_to_ang_vel(_attitude_target_euler_angle, _attitude_target_euler_rate, _attitude_target_ang_vel);
         // Limit the angular velocity
+        // 限制角速度
         ang_vel_limit(_attitude_target_ang_vel, radians(_ang_vel_roll_max), radians(_ang_vel_pitch_max), radians(_ang_vel_yaw_max));
         // Convert body-frame angular velocity into euler angle derivative of desired attitude
+        // 将车身框架角速度转换为所需姿态的欧拉角导数
         ang_vel_to_euler_rate(_attitude_target_euler_angle, _attitude_target_ang_vel, _attitude_target_euler_rate);
     } else {
         // When feedforward is not enabled, the target euler angle is input into the target and the feedforward rate is zeroed.
@@ -719,24 +728,28 @@ void AC_AttitudeControl::attitude_controller_run_quat()
 // 倾转分离
 void AC_AttitudeControl::thrust_heading_rotation_angles(Quaternion& att_to_quat, const Quaternion& att_from_quat, Vector3f& att_diff_angle, float& thrust_vec_dot)
 {
-    Matrix3f att_to_rot_matrix; // rotation from the target body frame to the inertial frame.
+    Matrix3f att_to_rot_matrix; // rotation from the target body frame to the inertial frame. 从目标体坐标系到惯性坐标系的旋转。
     att_to_quat.rotation_matrix(att_to_rot_matrix);
     Vector3f att_to_thrust_vec = att_to_rot_matrix * Vector3f(0.0f, 0.0f, 1.0f);
 
-    Matrix3f att_from_rot_matrix; // rotation from the current body frame to the inertial frame.
+    Matrix3f att_from_rot_matrix; // rotation from the current body frame to the inertial frame. 从当前车身坐标系到惯性坐标系的旋转。
     att_from_quat.rotation_matrix(att_from_rot_matrix);
     Vector3f att_from_thrust_vec = att_from_rot_matrix * Vector3f(0.0f, 0.0f, 1.0f);
 
     // the dot product is used to calculate the current lean angle for use of external functions
+    // 点乘用于计算当前倾斜角度使用外部函数
     _thrust_angle = acosf(constrain_float(Vector3f(0.0f,0.0f,1.0f) * att_from_thrust_vec,-1.0f,1.0f));
 
     // the cross product of the desired and target thrust vector defines the rotation vector
+    // 期望推力矢量和目标推力矢量的叉积定义了旋转矢量
     Vector3f thrust_vec_cross = att_from_thrust_vec % att_to_thrust_vec;
 
     // the dot product is used to calculate the angle between the target and desired thrust vectors
+    // 点乘用于计算目标和期望推力矢量之间的角度
     thrust_vec_dot = acosf(constrain_float(att_from_thrust_vec * att_to_thrust_vec, -1.0f, 1.0f));
 
     // Normalize the thrust rotation vector
+    // 归一化推力旋转矢量
     float thrust_vector_length = thrust_vec_cross.length();
     if (is_zero(thrust_vector_length) || is_zero(thrust_vec_dot)) {
         thrust_vec_cross = Vector3f(0, 0, 1);
