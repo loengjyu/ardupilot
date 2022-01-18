@@ -773,6 +773,8 @@ void NavEKF3::UpdateFilter(void)
     // If the current core selected has a bad error score or is unhealthy, switch to a healthy core with the lowest fault score
     // Don't start running the check until the primary core has started returned healthy for at least 10 seconds to avoid switching
     // due to initial alignment fluctuations and race conditions
+    // 如果当前选择的core评分较差或不健康，则切换到故障评分最低的健康cere
+    // 由于初始对齐波动和竞态条件，至少在主核启动恢复健康之前，不要开始运行检查，以避免切换
     if (!runCoreSelection) {
         static uint64_t lastUnhealthyTime_us = 0;
         if (!core[primary].healthy() || lastUnhealthyTime_us == 0) {
@@ -788,11 +790,15 @@ void NavEKF3::UpdateFilter(void)
 
             if (coreIndex != primary) {
                 // an alternative core is available for selection only if healthy and if states have been updated on this time step
+                // 只有当健康且状态已在此时间步上更新时，可选择的内核才可用
                 bool altCoreAvailable = core[coreIndex].healthy() && statePredictEnabled[coreIndex];
 
                 // If the primary core is unhealthy and another core is available, then switch now
                 // If the primary core is still healthy,then switching is optional and will only be done if
                 // a core with a significantly lower error score can be found
+                // 如果主核不健康，而另一个核可用，那么现在切换
+                // 如果主核仍然是健康的，那么切换是可选的，只有在
+                // 可以找到一个错误分数明显较低的核心
                 float altErrorScore = core[coreIndex].errorScore();
                 if (altCoreAvailable && (!core[newPrimaryIndex].healthy() || altErrorScore < lowestErrorScore)) {
                     newPrimaryIndex = coreIndex;
@@ -801,6 +807,7 @@ void NavEKF3::UpdateFilter(void)
             }
         }
         // update the yaw and position reset data to capture changes due to the lane switch
+        // 更新偏航和位置重置数据，以捕获由于车道切换而发生的变化
         if (newPrimaryIndex != primary) {
             updateLaneSwitchYawResetData(newPrimaryIndex, primary);
             updateLaneSwitchPosResetData(newPrimaryIndex, primary);
@@ -1599,29 +1606,33 @@ uint32_t NavEKF3::getLastPosDownReset(float &posDelta)
 }
 
 // update the yaw reset data to capture changes due to a lane switch
+// 更新偏航重置数据，以捕获由于车道切换而发生的变化
 void NavEKF3::updateLaneSwitchYawResetData(uint8_t new_primary, uint8_t old_primary)
 {
     Vector3f eulers_old_primary, eulers_new_primary;
     float old_yaw_delta;
 
     // If core yaw reset data has been consumed reset delta to zero
+    // 如果核心偏航复位数据已被消耗复位delta为零
     if (!yaw_reset_data.core_changed) {
         yaw_reset_data.core_delta = 0;
     }
 
     // If current primary has reset yaw after controller got it, add it to the delta
+    // 如果当前初级有复位偏航后，控制器得到它，将其添加到delta
     if (core[old_primary].getLastYawResetAngle(old_yaw_delta) > yaw_reset_data.last_function_call) {
         yaw_reset_data.core_delta += old_yaw_delta;
     }
 
     // Record the yaw delta between current core and new primary core and the timestamp of the core change
     // Add current delta in case it hasn't been consumed yet
+    // 记录当前内核和新的主内核之间的偏航delta和内核更改的时间戳
+    // 添加当前增量，以防它还没有被消耗
     core[old_primary].getEulerAngles(eulers_old_primary);
     core[new_primary].getEulerAngles(eulers_new_primary);
     yaw_reset_data.core_delta = wrap_PI(eulers_new_primary.z - eulers_old_primary.z + yaw_reset_data.core_delta);
     yaw_reset_data.last_primary_change = imuSampleTime_us / 1000;
     yaw_reset_data.core_changed = true;
-
 }
 
 // update the position reset data to capture changes due to a lane switch

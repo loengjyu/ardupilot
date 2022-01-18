@@ -38,6 +38,8 @@ bool NavEKF3_core::healthy(void) const
 
 // Return a consolidated error score where higher numbers represent larger errors
 // Intended to be used by the front-end to determine which is the primary EKF
+// 返回一个合并的错误分数，数值越高表示错误越大
+// 打算被前端用来确定哪个是主要的EKF
 float NavEKF3_core::errorScore() const
 {
     float score = 0.0f;

@@ -208,14 +208,17 @@ void Copter::check_ekf_reset()
 }
 
 // check for high vibrations affecting altitude control
+// 检查影响高度控制的高振动
 void Copter::check_vibration()
 {
     uint32_t now = AP_HAL::millis();
 
     // assume checks will succeed
+    //假设检查成功
     bool checks_succeeded = true;
 
     // check if vertical velocity and position innovations are positive (NKF3.IVD & NKF3.IPD are both positive)
+    // 检查垂直速度和位置创新是否为正
     Vector3f vel_innovation;
     Vector3f pos_innovation;
     Vector3f mag_innovation;
