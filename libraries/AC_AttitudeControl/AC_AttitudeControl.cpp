@@ -239,7 +239,7 @@ void AC_AttitudeControl::input_quaternion(Quaternion attitude_desired_quat)
 void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw(float euler_roll_angle_cd, float euler_pitch_angle_cd, float euler_yaw_rate_cds)
 {
     // Convert from centidegrees on public interface to radians
-    // 转换为弧度
+    // 将期望的roll_angle、pitch_angle和yaw_rate转换为弧度
     float euler_roll_angle = radians(euler_roll_angle_cd * 0.01f);
     float euler_pitch_angle = radians(euler_pitch_angle_cd * 0.01f);
     float euler_yaw_rate = radians(euler_yaw_rate_cds * 0.01f);
@@ -258,15 +258,22 @@ void AC_AttitudeControl::input_euler_angle_roll_pitch_euler_rate_yaw(float euler
 
     if (_rate_bf_ff_enabled) {
         // translate the roll pitch and yaw acceleration limits to the euler axis
-        // 平移roll,pitch和yaw加速度限制到欧拉轴（不理解为什么这样？）
+        // 平移roll,pitch和yaw加速度限制到欧拉轴（相当于限幅处理，但是内部原理不明白！！！）
         Vector3f euler_accel = euler_accel_limit(_attitude_target_euler_angle, Vector3f(get_accel_roll_max_radss(), get_accel_pitch_max_radss(), get_accel_yaw_max_radss()));
 
         // When acceleration limiting and feedforward are enabled, the sqrt controller is used to compute an euler
         // angular velocity that will cause the euler angle to smoothly stop at the input angle with limited deceleration
         // and an exponential decay specified by smoothing_gain at the end.
-        // 当启用加速限制和前馈时，使用Sqrt控制器计算欧拉。
-        // 角速度将使欧拉角在有限减速下的输入角平稳停止。
+        // 当启用加速限制和前馈时，使用Sqrt控制器计算欧拉角速度将使欧拉角在有限减速下的输入角平稳停止。
         // 最后由平滑增益指定的指数衰减。
+        
+        // 根据本次输入的期望姿态和未更新输入的当前期望姿态的姿态角度误差计算期望欧拉角速率校正值_attitude_target_euler_rate
+		// 以roll角为例
+		// wrap_PI(euler_roll_angle - _attitude_target_euler_angle.x)：计算本次输入期望roll角和当前期望姿态roll角之间的误差，并将其限制在[-pi pi]之间
+		// input_tc：姿态控制输入时间常数，数字越小，响应越尖锐；数字越大，响应越柔和，默认设定为0.15
+		// euler_accel.x经限制后的欧拉角加速度
+		// _attitude_target_euler_rate.x：当前期望姿态欧拉角速率
+		// _dt：采样周期
         _attitude_target_euler_rate.x = input_shaping_angle(wrap_PI(euler_roll_angle - _attitude_target_euler_angle.x), _input_tc, euler_accel.x, _attitude_target_euler_rate.x, _dt);
         _attitude_target_euler_rate.y = input_shaping_angle(wrap_PI(euler_pitch_angle - _attitude_target_euler_angle.y), _input_tc, euler_accel.y, _attitude_target_euler_rate.y, _dt);
 
